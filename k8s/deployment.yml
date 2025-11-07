@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp-v1
+  namespace: webapp
+spec:
+  selector:
+    matchLabels:
+      app: webapp 
+      version: v1 
+  template:
+    metadata:
+      labels:
+        app: webapp
+        version:: v1 
+    spec:
+      containers:
+      - name: webapp
+        image: jagpreeth/webapp:latest
+        ports:
+        - containerPort: 80
