@@ -29,13 +29,13 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             steps {
-                sh 'kubectl set image deployment/backend-deploy backend=$IMAGE_NAME:$BUILD_NUMBER -n backend'
+                sh 'kubectl set image deployment/webapp-v1 backend=$IMAGE_NAME:$BUILD_NUMBER -n webapp'
             }
         }
 
         stage('Verify Deployment') {
             steps {
-                sh 'kubectl rollout status deployment/backend-deploy -n backend'
+                sh 'kubectl rollout status deployment/webapp-v1 -n webapp'
             }
         }
     }
