@@ -2,36 +2,51 @@ pipeline {
     agent any
 
     environment {
-        IMAGE = "jagpreeth/webapp:latest"   // Your Docker Hub image
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-creds')
+        IMAGE_NAME = "jagpreeth/CI-Kubernetes-App"
     }
 
     stages {
-
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
-                // Clone your GitHub repo
-                git 'git@github.com:Jagpreeth/CICD-K8S-3Tier.git'
+                git branch: 'kubernetes', url: 'https://github.com/Jagpreeth/CICD-K8S-3Tier.git'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t $IMAGE_NAME:$BUILD_NUMBER .'
+            }
+        }
+
+        stage('Push Image to DockerHub') {
+            steps {
+                withDockerRegistry([credentialsId: 'dockerhub-creds', url: '']) {
+                    sh 'docker push $IMAGE_NAME:$BUILD_NUMBER'
+                }
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
-                script {
-                    // Apply K8s deployment YAML (make sure deployment uses IMAGE variable)
-                    sh "kubectl apply -f k8s/deployment.yaml"
-                    sh "kubectl apply -f k8s/service.yaml"
-                    sh "kubectl apply -f k8s/ingress.yaml"
-                }
+                sh 'kubectl set image deployment/backend-deploy backend=$IMAGE_NAME:$BUILD_NUMBER -n backend'
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                sh 'kubectl rollout status deployment/backend-deploy -n backend'
             }
         }
     }
 
     post {
-        success {
-            echo "CI/CD pipeline completed successfully!"
-        }
         failure {
-            echo "CI/CD pipeline failed. Check logs."
+            sh 'kubectl rollout undo deployment/backend-deploy -n backend'
+            echo "❌ Deployment failed, rolled back to previous version"
+        }
+        success {
+            echo "✅ Deployment successful! Version: $BUILD_NUMBER"
         }
     }
 }
